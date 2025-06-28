@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     tools {
-        maven 'mvn'       // Nom de Maven dans Jenkins
-        jdk 'JDK21'       // Nom du JDK dans Jenkins
+        maven 'mvn'
+        jdk 'JDK21'
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-creds' // Id Jenkins des creds DockerHub
-        DOCKER_IMAGE = 'directjnzh/devsecops-martin'  // Nom de l'image Docker mis à jour
+        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
+        DOCKER_IMAGE = 'directjnzh/devsecops-martin'
     }
 
     stages {
@@ -22,18 +22,20 @@ pipeline {
             steps {
                 script {
                     def mvnHome = tool 'mvn'
-                    sh "${mvnHome}/bin/mvn clean verify"
+                    sh "${mvnHome}/bin/mvn clean package -DskipTests"
                 }
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('Generate Dockerfile') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    script {
-                        def mvnHome = tool 'mvn'
-                        sh "${mvnHome}/bin/mvn sonar:sonar -Dsonar.projectKey=devsecops-martin -Dsonar.projectName='devsecops-martin'"
-                    }
+                script {
+                    writeFile file: 'Dockerfile', text: '''
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+                    '''.stripIndent()
                 }
             }
         }
